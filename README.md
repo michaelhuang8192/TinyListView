@@ -38,12 +38,18 @@ var Footer = React.createClass({
 	}
 });
 
+// render
 <ListView 
   adapter={adapter}
+  outterScroll={true} //optional, respone to main window's scrolling. default: false
   className={className}
   Header={Header} //optional
   Footer={Footer} //optional
+  onItemClick={this.onItemClick} //optional
 />
+
+//method:
+updateUI(); //should call after any implicit resizing.
 ```
 
 For Jquery
