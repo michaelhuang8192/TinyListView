@@ -1,6 +1,8 @@
 # TinyListView
 Displays a huge data set with a few resources. And this list view solves the problem of slow response in the browser when there's so many items in a single page.
 
+# Demo
+http://tinyappsdev.com/web/projects/tiny-list-view
 
 # Usage
 
