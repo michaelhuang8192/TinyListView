@@ -41,7 +41,6 @@ var Footer = React.createClass({
 <ListView 
   adapter={adapter}
   className={className}
-  style={style}
   Header={Header} //optional
   Footer={Footer} //optional
 />
