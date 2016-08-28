@@ -1,5 +1,5 @@
 import React  from 'react'
-
+import ReactDOM from 'react-dom'
 
 function Adapter() {
 	this._observers = [];
@@ -15,14 +15,6 @@ Adapter.prototype.getItem = function(position) {
 };
 
 Adapter.prototype.getView = function(position) {
-	return null;
-};
-
-Adapter.prototype.getViewHeader = function() {
-	return null;
-};
-
-Adapter.prototype.getViewFooter = function() {
 	return null;
 };
 
@@ -160,7 +152,7 @@ AjaxAdapter.prototype.loadPage = function(pageIndex) {
 
 };
 
-var ListViewItem = React.createClass({
+var ViewItem = React.createClass({
 
 	componentWillMount: function() {
 		this.setState({
@@ -192,11 +184,10 @@ var ListViewItem = React.createClass({
 	},
 
 	_onClick: function() { 
-		this.props.onItemClick(this.state.index, this.state.position);
+		this.props.onItemClick(this.state.position);
 	},
 
 	render: function() {
-		//console.log("render -> position" + this.state.position);
 		var className = "tlv_row";
 		if(this.state.selected) className += " tlv_item_active";
 
@@ -213,9 +204,55 @@ var ListViewItem = React.createClass({
 });
 
 var DEFAULT_ROW_HEIGHT = 40;
-var ListViewBody = React.createClass({
+var ListView = React.createClass({
 	scrollDelay: null,
 	scrollContainer: null,
+	rowHeight: 0,
+	virtualRowsCount: 0,
+
+	__measure() {
+		var rowHeight = $(this.refs['hidden_row']).height() || DEFAULT_ROW_HEIGHT;
+		var body = $(this.refs['body']);
+		var bodyPosTop = this.props.outterScroll ? body.offset().top : 0;
+		var containerHeight = this.scrollContainer.height() + 30;
+		
+		if(containerHeight == this.containerHeight
+			&& bodyPosTop == this.bodyPosTop
+			&& rowHeight == this.rowHeight
+		)
+			return false;
+		
+		this.rowHeight = rowHeight;
+		this.containerHeight = containerHeight;
+		this.bodyPosTop = bodyPosTop;
+
+		var numItemPerContainer = Math.ceil(containerHeight / this.rowHeight) + 1;
+		this.virtualRowsCount = Math.max(
+			Math.max(20, (Math.ceil(numItemPerContainer * 1.5) + 1) & ~1 ),
+			this.virtualRowsCount
+		);
+
+		return true;
+	},
+
+	_onResize: function() {
+		if(this.props.paused) return;
+
+		if(this.__measure()) {
+			this.setState(
+				$.extend({}, this._getVirtualView(), {version: this.state.version + 1})
+			);
+		} else {
+			var virtualView = this._getVirtualView();
+			if(virtualView.startPos != this.state.startPos
+				|| virtualView.endPos != this.state.endPos)
+				this.setState(virtualView);
+		}
+	},
+
+	updateUI: function() {
+		this._onResize();
+	},
 
 	_getVirtualView: function() {
 		if(this.scrollContainer == null) return null;
@@ -224,46 +261,46 @@ var ListViewBody = React.createClass({
 		var body = $(this.refs['body']);
 
 		var start = Math.min(
-			Math.max(0, container.scrollTop() - body.position().top),
+			Math.max(0, container.scrollTop() - this.bodyPosTop),
 			body.height()
 		);
-		var end = start + container.height();
+		var end = start + this.containerHeight;
 
-		var startPos = Math.floor(start / this.state.rowHeight);
-		var endPos = Math.ceil(end / this.state.rowHeight);
+		var startPos = Math.floor(start / this.rowHeight);
+		var endPos = Math.ceil(end / this.rowHeight);
 
-		var virtualRowsCount = Math.max(20,
-			Math.ceil(container.height() / this.state.rowHeight * 1.5)
-		);
-		if(virtualRowsCount < this.state.virtualRowsCount)
-			virtualRowsCount = this.state.virtualRowsCount;
-
-		return {startPos: startPos, endPos: endPos, virtualRowsCount: virtualRowsCount};
+		return {
+			startPos: startPos, 
+			endPos: endPos
+		};
 	},
 
 	_onScroll: function() {
-		if(this.scrollDelay !== null) {
-			clearTimeout(this.scrollDelay);
-			this.scrollDelay = null;
-		}
+		var scrollLeft = this.scrollContainer.scrollLeft();
+		var header = this.refs['header'];
+		if(header != null && (header.shouldScrollLeft == null || header.shouldScrollLeft() != false))
+			$(ReactDOM.findDOMNode(header)).css('left', -scrollLeft + "px");
+		var footer = this.refs['footer'];
+		if(footer != null && (footer.shouldScrollLeft == null || footer.shouldScrollLeft() != false))
+			$(ReactDOM.findDOMNode(header)).css('left', -scrollLeft + "px");
+
+		if(this.props.paused) return;
+		if(this.scrollDelay !== null) return;
 
 		var _this = this;
 		this.scrollDelay = setTimeout(function() {
-			//console.log("_onScroll");
+			_this.scrollDelay = null;
+			if(_this.props.paused) return;
+
 			var virtualView = _this._getVirtualView();
 			if(virtualView == null) return;
+
 			if(virtualView.startPos != _this.state.startPos
-				|| virtualView.endPos != _this.state.endPos
-				|| virtualView.virtualRowsCount != _this.state.virtualRowsCount
-			)
+				|| virtualView.endPos != _this.state.endPos)
 				_this.setState(virtualView);
 
 		}, 50);
 
-	},
-
-	_onResize: function() {
-		this._onScroll();
 	},
 
 	_change: function() {
@@ -273,23 +310,22 @@ var ListViewBody = React.createClass({
 		});
 	},
 
-	_onClick: function(index, position) {
+	_onClick: function(position) {
 		if(position != this.state.curPosition) {
 			this.setState({curPosition: position});
 		}
 
+		this.props.onItemClick && this.props.onItemClick(position);
 	},
 
 	shouldComponentUpdate: function(nextProps) {
-		if(nextProps.shouldNotRender)
+		if(nextProps.paused)
 			return false;
 		return true;
 	},
 
 	componentWillMount: function() {
 		this.setState({
-			rowHeight: 0,
-			virtualRowsCount: 0,
 			startPos: 0,
 			endPos: 0,
 			rowsCount: 0,
@@ -300,10 +336,10 @@ var ListViewBody = React.createClass({
 
 	render: function() {
 		var rows = [];
-		if(this.state.rowHeight <= 0) {
-			rows.push(<div key={-1} className="tlv_row" ref="hidden_row" style={{visibility: 'hidden'}}></div>);
-		} else {
-			var virtualRowsCount = this.state.virtualRowsCount;
+		rows.push(<div key={-1} className="tlv_row" ref="hidden_row" style={{visibility: 'hidden', left: 0, top: 0}}></div>);
+		
+		if(this.virtualRowsCount) {
+			var virtualRowsCount = this.virtualRowsCount;
 			var positions = new Array(virtualRowsCount);
 			var endpos = Math.min(this.state.rowsCount, this.state.endPos);
 			for(var i = this.state.startPos; i < endpos; i++) {
@@ -314,44 +350,65 @@ var ListViewBody = React.createClass({
 				var position = positions[i] === undefined ? -1 : positions[i];
 				var selected = position >= 0 && this.state.curPosition == position;
 				rows.push(
-				<ListViewItem
+				<ViewItem
 					adapter={this.props.adapter}
 					key={i} ref={'vrow' + i}
-					index={i}
 					position={position}
 					selected={selected}
 					version={this.state.version}
-					rowHeight={this.state.rowHeight}
+					rowHeight={this.rowHeight}
 					onItemClick={this._onClick} />
 				);
 			}
 		}
 
-		var height = this.state.rowHeight * this.state.rowsCount;
+		var height = this.rowHeight * this.state.rowsCount;
 		var style = $.extend({}, this.props.style || {}, {height: height + "px"});
 
-		var className = this.props.className != null ? "tlv_body " + this.props.className : "tlv_body";
-		return (<div className={className} ref="body" style={style}>{rows}</div>);
+		var classNames = ["tinylistview"];
+		if(!this.props.outterScroll) classNames.push("tinylistview_innerscroll");
+		if(this.props.className) classNames.push(this.props.className);
+
+		var customViews = [];
+		if(this.props.Header) {
+			var Header = this.props.Header;
+			customViews.push(<Header ref="header" ctx={this} />);
+		}
+		if(this.props.Footer) {
+			var Footer = this.props.Footer;
+			customViews.push(<Footer ref="footer" ctx={this} />);
+		}
+
+		return (
+		<div className={classNames.join(" ")}>
+			<div className="tlv_container" ref="scrollContainer">
+				<div className="tlv_body" ref="body" style={style}>{rows}</div>
+			</div>
+			{customViews}
+		</div>
+		);
 
 	},
 
-	parentDidMount: function(scrollContainer) {
-		this.scrollContainer = $(scrollContainer);
-
-		var container = this.scrollContainer;
-		var rowHeight = $(this.refs['hidden_row']).outerHeight();
-		if(rowHeight <= 0) rowHeight = DEFAULT_ROW_HEIGHT;
-		this.state.rowHeight = rowHeight;
+	componentDidMount: function() {
+		this.scrollContainer = this.props.outterScroll ? $(window) : $(this.refs['scrollContainer']);
 		
+		$(window).on('resize', this._onResize);
+		this.scrollContainer.on('scroll', this._onScroll);
+
+		this.__measure();
+
 		var virtualView = this._getVirtualView();
 		this.state.startPos = virtualView.startPos;
 		this.state.endPos = virtualView.endPos;
-		this.state.virtualRowsCount = virtualView.virtualRowsCount;
 		
 		this.props.adapter.registerDataSetObserver(this._change);
 	},
 
-	parentWillUnmount: function() {
+	componentWillUnmount: function() {
+		$(window).off('resize', this._onResize);
+		this.scrollContainer.off('scroll', this._onScroll);
+
 		this.props.adapter.unregisterDataSetObserver(this._change);
 
 		if(this.scrollDelay !== null) {
@@ -364,75 +421,9 @@ var ListViewBody = React.createClass({
 
 });
 
-var ListView = React.createClass({
-	scrollLeft: 0,
-
-	_onScrollLeft: function() {
-		var container = $(this.refs['scrollContainer']);
-		var left = container.scrollLeft();
-		if(left == this.scrollLeft) return;
-		this.scrollLeft = left;
-
-		var header = this.refs['header'];
-		if(header && header.isScrollable && header.isScrollable()) {
-			$(this.refs['headerCnt']).css('left', -left + "px");
-		}
-
-		var footer = this.refs['footer'];
-		if(footer && footer.isScrollable && footer.isScrollable()) {
-			$(this.refs['footerCnt']).css('left', -left + "px");
-		}
-	},
-
-	_onScroll: function(evt) {
-		this.refs['listViewBody']._onScroll(evt);
-		this._onScrollLeft();
-	},
-
-	_onResize: function(evt) {
-		this.refs['listViewBody']._onResize(evt);
-	},
-
-	render: function() {
-		var header = this.props.adapter.getViewHeader();
-		var footer = this.props.adapter.getViewFooter();
-
-		var className = this.props.className != null ? "tinylistview " + this.props.className : "tinylistview";
-		var style = $.extend({}, this.props.style || {});
-		return (
-		<div className={className} style={style}>
-			<div key="header" ref="headerCnt" className="tlv_row tlv_header" style={{display: header == null ? 'none' : 'block'}}>
-				{header && React.cloneElement(header, {adapter: this.props.adapter, ref: "header"})}
-			</div>
-			<div key="body" className="tlv_scroll_containter" ref="scrollContainer">
-				<div style={{position: 'relative'}}><ListViewBody adapter={this.props.adapter} ref="listViewBody" /></div>
-			</div>
-			<div key="footer" ref="footerCnt" className="tlv_row tlv_footer" style={{display: footer == null ? 'none' : 'block'}}>
-				{footer && React.cloneElement(footer, {adapter: this.props.adapter, ref: "footer"})}
-			</div>
-		</div>
-		);
-
-	},
-
-	componentDidMount: function() {
-		$(window).on('resize', this._onResize);
-		$(this.refs['scrollContainer']).on('scroll', this._onScroll);
-		this.refs['listViewBody'].parentDidMount(this.refs['scrollContainer']);
-	},
-
-	componentWillUnmount: function() {
-		$(window).off('resize', this._onResize);
-		$(this.refs['scrollContainer']).off('scroll', this._onScroll);
-		this.refs['listViewBody'].parentWillUnmount();
-	}
-
-});
 
 module.exports = {
 	ListView: ListView,
-	ListViewBody: ListViewBody,
 	AjaxAdapter: AjaxAdapter,
-	ArrayAdapter: ArrayAdapter,
-	Adapter: Adapter
+	ArrayAdapter: ArrayAdapter
 };

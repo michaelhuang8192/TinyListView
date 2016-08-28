@@ -1,0 +1,9 @@
+.tinylistview {}
+.tinylistview_innerscroll {position:relative;overflow:hidden;box-sizing:border-box;}
+.tinylistview_innerscroll >.tlv_container {box-sizing:border-box;position:relative;overflow:auto;width:100%;height:100%;}
+.tinylistview .tlv_body {position:relative}
+.tinylistview .tlv_row {box-sizing:border-box;position:absolute;height:40px;left:0;min-width:1px;}
+
+.tinylistview .tlv_header {left:0;top:0;position:fixed;font-weight:bold;text-align:center;}
+.tinylistview .tlv_footer {left:0;bottom:0;position:fixed;font-weight:bold;text-align:center;}
+.tinylistview_innerscroll .tlv_header, .tinylistview_innerscroll .tlv_footer {position:absolute}

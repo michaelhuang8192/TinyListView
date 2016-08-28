@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
+
+<title>Tiny List View Demo</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css"/>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css"/>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+
+
+<link rel="stylesheet" href="../src/TinyListView.css" />
+<script src="full_window.dist.js"></script>
+
+<style>
+body {background-color:#fffef7}
+.tinylistview {padding:41px 0;width:450px;}
+.tinylistview .tlv_row {background-color: #FAFAFA; white-space:nowrap;}
+.tinylistview .tlv_body >.tlv_row:hover {background-color: #EEEEEE}
+
+.tinylistview .tlv_row >div {height:100%;font-size:18px;line-height:48px;padding:4px 10px;}
+
+.tinylistview .tlv_row >div >div {display:inline-block;width:160px;height:100%;vertical-align:top;}
+.tinylistview .tlv_row >div >div:nth-child(1) {width:100px;}
+.tinylistview .tlv_row >div >div:nth-child(2) {text-align:center;}
+.tinylistview .tlv_row >div >div:nth-child(3) {width:170px;text-overflow: ellipsis;overflow:hidden;}
+
+.tinylistview .tlv_row {height:161px;border-bottom:1px dotted #E0E0E0}
+.tinylistview .tlv_row >div {line-height:152px}
+.tinylistview .tlv_row >div >div >img {max-height:152px;border:none;vertical-align:top}
+
+.tinylistview .tlv_header {height:41px}
+.tinylistview .tlv_header >div {line-height:32px}
+.tinylistview .tlv_footer {font-size:22px;right:0;height:41px;line-height:39px;border-top:1px solid #ccc;text-align:center;background-color:#212121;color:#fff;}
+</style>
+
+</head>
+
+<body><div id="app"></div></body>
+
+</html>
