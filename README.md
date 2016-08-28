@@ -14,24 +14,36 @@ adapter.getView = (position)=> {
 	var item = this.getItem(position);
 	if(item == null) return <div></div>;
 	return (
-		<div>{item.link}</div>
+		<div><div>{item.link}</div></div>
 	);
 };
 
-// header, optional
-adapter.getViewHeader = ()=> {
-	return <div ref="header"><div>Header</div></div>;
-};
+var Header = React.createClass({
+	render() {
+		return (
+			<div className="tlv_row tlv_header" ref="header">
+				<div><div>Link</div></div>
+			</div>
+		);
+	}
+});
 
-// footer, optional
-adapter.getViewFooter = ()=> {
-  return <div ref="footer"><div>anything</div></div>;
-};
+var Footer = React.createClass({
+	shouldScrollLeft() {
+		return false;
+	},
+
+	render() {
+		return <div className="tlv_footer">Footer</div>;
+	}
+});
 
 <ListView 
   adapter={adapter}
   className={className}
   style={style}
+  Header={Header} //optional
+  Footer={Footer} //optional
 />
 ```
 
